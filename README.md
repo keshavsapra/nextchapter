@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="frontend/public/static/nextchapter.png" alt="NextChapter logo" width="140">
+<img src="frontend/public/static/logo.png" alt="NextChapter logo" width="140">
 
 # NextChapter
 

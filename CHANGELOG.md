@@ -8,6 +8,10 @@ All notable changes to this project will be documented in this file.
 
 - (nothing yet)
 
+### Changed
+
+- New NextChapter app logo everywhere: sidebar rail icon, favicon, apple-touch-icon, and the OpenGraph/social preview card; legacy Inkheart graphics removed
+
 ## [0.3.0] - Paperbound (2026-10-25)
 
 ### Added
