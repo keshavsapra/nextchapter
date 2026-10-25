@@ -6,6 +6,12 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- (nothing yet)
+
+## [0.3.0] - Paperbound (2026-10-25)
+
+### Added
+
 - Support for EPUB (.epub) files across the entire library alongside PDFs
 - EPUB cover image extraction from metadata and resources, with automatic fallback
 - Full-text search indexing for EPUB chapters with heading and table of contents detection
