@@ -434,6 +434,17 @@
       <div class="popover-empty">No collections</div>
     {/if}
   </Popover>
+
+  <a
+    class="rail-icon"
+    href="https://buymeacoffee.com/ar_kenny"
+    target="_blank"
+    rel="noopener noreferrer"
+    aria-label="Buy me a coffee"
+    title="Buy me a coffee"
+  >
+    <Icon icon="mdi:coffee" />
+  </a>
 </div>
 
 <CollectionOptionsModal

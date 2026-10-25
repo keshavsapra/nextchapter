@@ -13,6 +13,7 @@
 ![Formats](https://img.shields.io/badge/Formats-PDF%20%7C%20EPUB-f97316?style=flat-square)
 ![Platforms](https://img.shields.io/badge/Arch-amd64%20%7C%20arm64-10b981?style=flat-square&logo=docker)
 ![Built with](https://img.shields.io/badge/Rust%20%2B%20Svelte-0891b2?style=flat-square&logo=rust)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Support%20the%20project-FFDD00?style=flat-square&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/ar_kenny)
 
 <br>
 

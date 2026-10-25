@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 - New NextChapter app logo everywhere: sidebar rail icon, favicon, apple-touch-icon, and the OpenGraph/social preview card; legacy Inkheart graphics removed
+- "Buy me a coffee" support link (https://buymeacoffee.com/ar_kenny) next to the sidebar version label, in the collapsed rail, and as a README badge
 
 ## [0.3.0] - Paperbound (2026-10-25)
 
