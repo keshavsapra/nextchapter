@@ -389,19 +389,74 @@
     rendition.themes.select(`theme-${activeKey}`)
   }
 
+  type EpubThemePalette = { background: string; text: string; heading: string; link: string }
+
+  const baseBodyRules = {
+    'font-family': 'system-ui, -apple-system, sans-serif !important',
+    'line-height': '1.6 !important',
+    'padding': '0 24px !important',
+    'box-sizing': 'border-box !important',
+  }
+  const mediaRules = {
+    'max-width': '100% !important',
+    'height': 'auto !important',
+  }
+  const textRules = {
+    'word-break': 'break-word !important',
+    'overflow-wrap': 'break-word !important',
+  }
+
+  /**
+   * Build epub content theme rules scoped to the theme class that epub.js
+   * adds to the content body on `themes.select()` (e.g. `body.theme-dark`).
+   *
+   * epub.js injects object-registered rules into one <style> node per theme
+   * and never removes them, so unscoped rules (plain `body { ... }`) from
+   * previously selected themes keep matching and the last injected one wins.
+   * Scoping every selector to the body class keeps only the selected theme
+   * active, regardless of cascade order.
+   */
+  function epubThemeRules(name: string, palette: EpubThemePalette) {
+    const scope = `body.theme-${name}`
+    const headingScope = `${scope} h1, ${scope} h2, ${scope} h3, ${scope} h4, ${scope} h5, ${scope} h6`
+    const textScope = `${scope} p, ${scope} div, ${scope} span, ${scope} li, ${scope} blockquote`
+    const linkScope = `${scope} a, ${scope} a:link, ${scope} a:visited`
+    const mediaScope = `${scope} img, ${scope} svg, ${scope} table`
+    return {
+      [scope]: { ...baseBodyRules, background: `${palette.background} !important`, color: `${palette.text} !important` },
+      [textScope]: { ...textRules, color: `${palette.text} !important` },
+      [headingScope]: { color: `${palette.heading} !important` },
+      [linkScope]: { color: `${palette.link} !important` },
+      [mediaScope]: mediaRules,
+    }
+  }
+
   function toggleTheme() {
     const isDark = isDarkTheme($selectedTheme)
     updateTheme(isDark ? 'light' : 'dark')
   }
 
-  function toggleFlowMode() {
-    flowMode = flowMode === 'paginated' ? 'scrolled' : 'paginated'
-    if (rendition) {
-      rendition.flow(flowMode === 'paginated' ? 'paginated' : 'scrolled-doc')
-      if (currentCfi) {
-        rendition.display(currentCfi)
-      }
+  function resizeRendition() {
+    if (!rendition) return
+    // epub.js creates the manager asynchronously (Rendition.start()), so
+    // resize() can be called before `manager` exists - guard against that
+    // instead of crashing with a TypeError on the reader.
+    if (!(rendition as any).manager) return
+    try {
+      rendition.resize()
+    } catch (err) {
+      console.warn('Rendition resize error:', err)
     }
+  }
+
+  async function toggleFlowMode() {
+    if (!book || loading) return
+    flowMode = flowMode === 'paginated' ? 'scrolled' : 'paginated'
+    // Recreate the rendition - the manager cannot be switched in place.
+    const target = currentCfi || undefined
+    await createRendition(target)
+    await tick()
+    resizeRendition()
   }
 
   function handleBack() {
@@ -426,26 +481,22 @@
   }
 
   async function next() {
-    if (!rendition || isNavigating) return
-    isNavigating = true
+    if (!rendition) return
     try {
+      // epub.js serializes page turns on its internal queue, so we don't need
+      // a local busy-flag - blocking here would drop rapid input.
       await rendition.next()
     } catch (err) {
       console.warn('Navigation next error:', err)
-    } finally {
-      isNavigating = false
     }
   }
 
   async function prev() {
-    if (!rendition || isNavigating) return
-    isNavigating = true
+    if (!rendition) return
     try {
       await rendition.prev()
     } catch (err) {
       console.warn('Navigation prev error:', err)
-    } finally {
-      isNavigating = false
     }
   }
 
@@ -620,20 +671,200 @@
     try {
       const loc = book.locations.locationFromCfi(cfi)
       if (typeof loc === 'number' && loc >= 0) {
-        currentLocation = loc + 1
-        totalLocations = book.locations.total || 0
-        const pct = book.locations.percentageFromCfi(cfi)
-        progressPercentage = Math.round((pct || 0) * 100)
+        // epub.js `locations.total` is the last 0-based location index
+        // (_locations.length - 1), so the human-readable count is total + 1.
+        totalLocations = (book.locations.total || 0) + 1
+        currentLocation = Math.min(loc + 1, totalLocations)
+        const pct = Math.min(Math.max(book.locations.percentageFromCfi(cfi) || 0, 0), 1)
+        progressPercentage = Math.round(pct * 100)
       }
     } catch (_) {}
   }
 
   function handleKeydown(e: KeyboardEvent) {
+    // Let form controls, dialogs, and editable areas keep their normal keys;
+    // dialogs are rendered top-layer, so pagination would happen behind them.
+    const target = e.target as HTMLElement | null
+    if (target?.closest?.('dialog, input, textarea, select, button, a, [role="textbox"], [contenteditable]')) {
+      return
+    }
     if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') {
+      e.preventDefault()
       next()
     } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+      e.preventDefault()
       prev()
     }
+  }
+
+  /**
+   * Create (or recreate) the rendition after a flow-mode switch.
+   *
+   * epub.js cannot switch a rendition's manager after creation, and its
+   * `flow()` only relayouts within the existing manager - the "continuous"
+   * manager keeps rendering fixed horizontal columns for scrolled flows.
+   * To actually toggle between paginated and continuous scroll we destroy
+   * the old rendition and build a new one with the right manager.
+   */
+
+  // Content hooks that successive renditions registered on the book's spine
+  // (see createRendition); removed on rebuild to avoid stale closures.
+  let staleSpineHooks: ((...args: any[]) => void)[] = []
+
+  function cleanupStaleSpineHooks() {
+    if (!staleSpineHooks.length) return
+    const spineHook = (book?.spine as any)?.hooks?.content
+    if (spineHook?.deregister) {
+      for (const fn of staleSpineHooks) {
+        try { spineHook.deregister(fn) } catch (_) {}
+      }
+    }
+    staleSpineHooks = []
+  }
+
+  async function createRendition(target?: string | number) {
+    if (!book || !viewerContainer) return
+
+    if (rendition) {
+      try { rendition.destroy() } catch (_) {}
+      rendition = null
+      viewerContainer.innerHTML = ''
+      // epub.js's destroy() never deregisters the `injectIdentifier` content
+      // hook it registered on the book's spine, so every rebuild would leave
+      // a hook pointing at a rendition whose `book` reference was nulled -
+      // one console error per chapter load. Remove stale hooks before
+      // building the next rendition.
+      cleanupStaleSpineHooks()
+    }
+
+    const spineContentHook = (book.spine as any)?.hooks?.content
+    const hooksBeforeCreate: unknown[] = spineContentHook?.list?.() ?? []
+
+    rendition = book.renderTo(viewerContainer, {
+      // 'continuous' prevents chapter-skipping bugs when paginating;
+      // a real vertical scroll layout needs the default manager.
+      manager: flowMode === 'paginated' ? 'continuous' : 'default',
+      flow: flowMode === 'paginated' ? 'paginated' : 'scrolled-doc',
+      width: '100%',
+      height: '100%',
+      spread: 'none',
+    })
+    // Track the spine content hook this rendition registered (epub.js adds
+    // `injectIdentifier` to the book on every construction) so it can be
+    // removed when this rendition is destroyed.
+    if (spineContentHook) {
+      const added = (spineContentHook.list?.() ?? []).find((fn: unknown) => !hooksBeforeCreate.includes(fn))
+      if (added) staleSpineHooks.push(added)
+    }
+
+    // Register content hook for robust word wrapping and responsive media
+    rendition.hooks.content.register(registerContentStyles)
+
+    // Register theme styles
+    rendition.themes.register('theme-dark', epubThemeRules('dark', { background: '#1a1625', text: '#e4e5f1', heading: '#ffffff', link: '#9171f8' }))
+    rendition.themes.register('theme-light', epubThemeRules('light', { background: '#ffffff', text: '#484b6a', heading: '#1a202c', link: '#5e43f3' }))
+    rendition.themes.register('theme-glassmorphism', epubThemeRules('glassmorphism', { background: '#0f172a', text: '#f8fafc', heading: '#38bdf8', link: '#38bdf8' }))
+    rendition.themes.register('theme-neomorphism', epubThemeRules('neomorphism', { background: '#e6ecf5', text: '#2d3748', heading: '#1a202c', link: '#6366f1' }))
+    rendition.themes.register('theme-aurora', epubThemeRules('aurora', { background: '#090d16', text: '#f1f5f9', heading: '#10b981', link: '#34d399' }))
+    rendition.themes.register('theme-neo-brutalism', epubThemeRules('neo-brutalism', { background: '#fdfbf7', text: '#000000', heading: '#ff5277', link: '#e02854' }))
+    rendition.themes.register('theme-cyberpunk', epubThemeRules('cyberpunk', { background: '#0d0221', text: '#00f0ff', heading: '#ff007f', link: '#ffe600' }))
+    rendition.themes.register('theme-monochrome', epubThemeRules('monochrome', { background: '#0a0a0a', text: '#ededed', heading: '#ffffff', link: '#ffffff' }))
+
+    applyTheme($selectedTheme)
+
+    // Listen to relocation events for progress tracking
+    rendition.on('relocated', (location: any) => {
+      if (!location?.start) return
+      currentCfi = location.start.cfi || ''
+      const spineIndex = location.start.index ?? 0
+      currentChapterIndex = spineIndex
+
+      if (location.start.displayed) {
+        displayedTotalPages = location.start.displayed.total || 1
+        // epub.js can report a page beyond the section total while the
+        // continuous manager relayouts across section boundaries.
+        displayedPage = Math.max(1, Math.min(location.start.displayed.page || 1, displayedTotalPages))
+      }
+
+      if (locationsReady) {
+        updateLocationProgress(currentCfi)
+      }
+
+      // Save reading progress
+      if (fileId) {
+        savePageProgress(fileId, spineIndex + 1, currentCfi)
+      }
+
+      if (location.start.href) {
+        activeHref = location.start.href
+      }
+    })
+
+    // Always display the target (falls back to the first linear spine
+    // section when undefined) - without this the reader could open blank.
+    try {
+      await rendition.display(target as string | number | undefined)
+    } catch (dispErr) {
+      console.warn('rendition.display failed:', dispErr)
+      await rendition.display()
+    }
+  }
+
+  // Generate background locations for page numbering (done once per book)
+  function generateLocations() {
+    book?.ready.then(() => {
+      return book?.locations.generate(1024)
+    }).then(() => {
+      locationsReady = true
+      if (currentCfi) {
+        updateLocationProgress(currentCfi)
+      }
+    }).catch((e) => {
+      console.warn('Epub locations generation skipped:', e)
+    })
+  }
+
+  // Injected into each chapter document: robust word wrapping + responsive media
+  function registerContentStyles(contents: any) {
+    const doc = contents?.document
+    if (!doc) return
+    const style = doc.createElement('style')
+    style.textContent = `
+      * {
+        box-sizing: border-box !important;
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
+        overflow-anchor: none !important;
+      }
+      html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow-anchor: none !important;
+      }
+      body {
+        padding: 20px 32px 60px 32px !important;
+        -webkit-font-smoothing: antialiased;
+      }
+      p, div, span, li, blockquote {
+        word-break: normal !important;
+        overflow-wrap: break-word !important;
+        hyphens: auto !important;
+      }
+      img, svg, video, image {
+        max-width: 100% !important;
+        max-height: 80vh !important;
+        height: auto !important;
+        object-fit: contain !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+      table {
+        max-width: 100% !important;
+        table-layout: fixed !important;
+        word-break: break-word !important;
+      }
+    `
+    doc.head.appendChild(style)
   }
 
   let _mql: MediaQueryList | null = null
@@ -685,179 +916,7 @@
       const spine = await book.loaded.spine
       totalChapters = spine?.length || 0
 
-      // Render to container using continuous manager to prevent chapter skipping
-      rendition = book.renderTo(viewerContainer, {
-        manager: 'continuous',
-        flow: flowMode === 'paginated' ? 'paginated' : 'scrolled-doc',
-        width: '100%',
-        height: '100%',
-        spread: 'none',
-      })
-
-      // Register content hook for robust word wrapping and responsive media
-      rendition.hooks.content.register((contents: any) => {
-        const doc = contents?.document
-        if (!doc) return
-        const style = doc.createElement('style')
-        style.textContent = `
-          * {
-            box-sizing: border-box !important;
-            word-wrap: break-word !important;
-            overflow-wrap: break-word !important;
-            overflow-anchor: none !important;
-          }
-          html, body {
-            margin: 0 !important;
-            padding: 0 !important;
-            overflow-anchor: none !important;
-          }
-          body {
-            padding: 20px 32px 60px 32px !important;
-            -webkit-font-smoothing: antialiased;
-          }
-          p, div, span, li, blockquote {
-            word-break: normal !important;
-            overflow-wrap: break-word !important;
-            hyphens: auto !important;
-          }
-          img, svg, video, image {
-            max-width: 100% !important;
-            max-height: 80vh !important;
-            height: auto !important;
-            object-fit: contain !important;
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
-          }
-          table {
-            max-width: 100% !important;
-            table-layout: fixed !important;
-            word-break: break-word !important;
-          }
-        `
-        doc.head.appendChild(style)
-      })
-
-      // Register theme styles
-      const baseBodyRules = {
-        'font-family': 'system-ui, -apple-system, sans-serif !important',
-        'line-height': '1.6 !important',
-        'padding': '0 24px !important',
-        'box-sizing': 'border-box !important',
-      }
-      const mediaRules = {
-        'max-width': '100% !important',
-        'height': 'auto !important',
-      }
-      const textRules = {
-        'word-break': 'break-word !important',
-        'overflow-wrap': 'break-word !important',
-      }
-
-      rendition.themes.register('theme-dark', {
-        body: { ...baseBodyRules, background: '#1a1625 !important', color: '#e4e5f1 !important' },
-        'p, div, span, li, blockquote': { ...textRules, color: '#e4e5f1 !important' },
-        'h1, h2, h3, h4, h5, h6': { color: '#ffffff !important' },
-        'a, a:link, a:visited': { color: '#9171f8 !important' },
-        'img, svg, table': mediaRules,
-      })
-
-      rendition.themes.register('theme-light', {
-        body: { ...baseBodyRules, background: '#ffffff !important', color: '#484b6a !important' },
-        'p, div, span, li, blockquote': { ...textRules, color: '#484b6a !important' },
-        'h1, h2, h3, h4, h5, h6': { color: '#1a202c !important' },
-        'a, a:link, a:visited': { color: '#5e43f3 !important' },
-        'img, svg, table': mediaRules,
-      })
-
-      rendition.themes.register('theme-glassmorphism', {
-        body: { ...baseBodyRules, background: '#0f172a !important', color: '#f8fafc !important' },
-        'p, div, span, li, blockquote': { ...textRules, color: '#f8fafc !important' },
-        'h1, h2, h3, h4, h5, h6': { color: '#38bdf8 !important' },
-        'a, a:link, a:visited': { color: '#38bdf8 !important' },
-        'img, svg, table': mediaRules,
-      })
-
-      rendition.themes.register('theme-neomorphism', {
-        body: { ...baseBodyRules, background: '#e6ecf5 !important', color: '#2d3748 !important' },
-        'p, div, span, li, blockquote': { ...textRules, color: '#2d3748 !important' },
-        'h1, h2, h3, h4, h5, h6': { color: '#1a202c !important' },
-        'a, a:link, a:visited': { color: '#6366f1 !important' },
-        'img, svg, table': mediaRules,
-      })
-
-      rendition.themes.register('theme-aurora', {
-        body: { ...baseBodyRules, background: '#090d16 !important', color: '#f1f5f9 !important' },
-        'p, div, span, li, blockquote': { ...textRules, color: '#f1f5f9 !important' },
-        'h1, h2, h3, h4, h5, h6': { color: '#10b981 !important' },
-        'a, a:link, a:visited': { color: '#34d399 !important' },
-        'img, svg, table': mediaRules,
-      })
-
-      rendition.themes.register('theme-neo-brutalism', {
-        body: { ...baseBodyRules, background: '#fdfbf7 !important', color: '#000000 !important' },
-        'p, div, span, li, blockquote': { ...textRules, color: '#000000 !important' },
-        'h1, h2, h3, h4, h5, h6': { color: '#ff5277 !important' },
-        'a, a:link, a:visited': { color: '#e02854 !important' },
-        'img, svg, table': mediaRules,
-      })
-
-      rendition.themes.register('theme-cyberpunk', {
-        body: { ...baseBodyRules, background: '#0d0221 !important', color: '#00f0ff !important' },
-        'p, div, span, li, blockquote': { ...textRules, color: '#00f0ff !important' },
-        'h1, h2, h3, h4, h5, h6': { color: '#ff007f !important' },
-        'a, a:link, a:visited': { color: '#ffe600 !important' },
-        'img, svg, table': mediaRules,
-      })
-
-      rendition.themes.register('theme-monochrome', {
-        body: { ...baseBodyRules, background: '#0a0a0a !important', color: '#ededed !important' },
-        'p, div, span, li, blockquote': { ...textRules, color: '#ededed !important' },
-        'h1, h2, h3, h4, h5, h6': { color: '#ffffff !important' },
-        'a, a:link, a:visited': { color: '#ffffff !important' },
-        'img, svg, table': mediaRules,
-      })
-
-      applyTheme($selectedTheme)
-
-      // Listen to relocation events for progress tracking
-      rendition.on('relocated', (location: any) => {
-        if (!location?.start) return
-        currentCfi = location.start.cfi || ''
-        const spineIndex = location.start.index ?? 0
-        currentChapterIndex = spineIndex
-
-        if (location.start.displayed) {
-          displayedPage = location.start.displayed.page || 1
-          displayedTotalPages = location.start.displayed.total || 1
-        }
-
-        if (locationsReady) {
-          updateLocationProgress(currentCfi)
-        }
-
-        // Save reading progress
-        if (fileId) {
-          savePageProgress(fileId, spineIndex + 1, currentCfi)
-        }
-
-        if (location.start.href) {
-          activeHref = location.start.href
-        }
-      })
-
-      // Generate background locations for page numbering
-      book.ready.then(() => {
-        return book?.locations.generate(1024)
-      }).then(() => {
-        locationsReady = true
-        if (currentCfi) {
-          updateLocationProgress(currentCfi)
-        }
-      }).catch((e) => {
-        console.warn('Epub locations generation skipped:', e)
-      })
-
-      // Determine initial position
+      // Render to container (see createRendition)
       const savedProgress = loadEpubProgress(fileId)
       let target: string | number | undefined = undefined
 
@@ -873,19 +932,27 @@
         target = spineItem?.href || savedProgress.page - 1
       }
 
-      await rendition.display(target)
+      await createRendition(target)
+
+      generateLocations()
       loading = false
 
       await tick()
       if (rendition) {
-        rendition.resize()
+        // The manager is created asynchronously inside epub.js's internal
+        // queue (Rendition.start() runs after `book.opened`), so a resize
+        // call can arrive before it exists. Wait for `started` first.
+        const initialRendition = rendition
+        Promise.resolve().then(() => (initialRendition as any).started).then(() => {
+          if (rendition === initialRendition) resizeRendition()
+        }).catch(() => {})
       }
 
       // Observe size changes
       if (viewerContainer) {
         resizeObserver = new ResizeObserver(() => {
           if (rendition && !loading) {
-            rendition.resize()
+            resizeRendition()
           }
         })
         resizeObserver.observe(viewerContainer)

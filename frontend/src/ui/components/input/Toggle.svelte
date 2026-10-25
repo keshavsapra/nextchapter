@@ -23,7 +23,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: var(--card-color);
+    background-color: var(--toggle-track, var(--card-color));
     border: 0.15rem solid var(--separator-1);
     border-radius: var(--radius-xl);
     transition: all 0.2s ease;
@@ -48,7 +48,10 @@
 
   input:checked + .slider:before {
     transform: translateX(1.5rem);
-    background-color: white;
+    /* Complements the checked slider background (--button-primary).
+       Themes that use a light primary color provide a dark value
+       (e.g. monochrome) so the knob stays visible. */
+    background-color: var(--toggle-knob-checked, white);
   }
 
   input:focus + .slider {

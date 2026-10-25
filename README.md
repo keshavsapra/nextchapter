@@ -1,56 +1,94 @@
 <div align="center">
-  <img src="frontend/public/static/logo.svg" alt="NextChapter logo" width="160" height="160">
-  <h1>NextChapter</h1>
-  <p><strong>Lightweight, self-hosted PDF & EPUB library indexer and web reader.</strong></p>
 
-  <p>
-    <a href="https://github.com/keshavsapra/nextchapter"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License"></a>
-    <img src="https://img.shields.io/badge/Platforms-Linux%20%7C%20macOS%20%7C%20Windows%20%7C%20ARM64-blue?logo=docker" alt="Platform">
-    <img src="https://img.shields.io/badge/Formats-PDF%20%7C%20EPUB-orange" alt="Supported Formats">
-    <a href="https://github.com/keshavsapra/nextchapter/actions"><img src="https://github.com/keshavsapra/nextchapter/actions/workflows/docker.yml/badge.svg" alt="Build Status"></a>
-  </p>
-</div>
+<img src="frontend/public/static/nextchapter.png" alt="NextChapter logo" width="140">
+
+# NextChapter
+
+### Your library. Your files. One gorgeous reader.
+
+**A lightweight, self-hosted PDF & EPUB library with a blazing-fast full-text search engine and a beautiful built-in web reader.**
+
+[![License](https://img.shields.io/badge/License-Apache_2.0-2563eb?style=flat-square&logo=apache&logoColor=white)](LICENSE)
+[![CI](https://img.shields.io/github/actions/workflow/status/keshavsapra/nextchapter/docker.yml?branch=main&style=flat-square&logo=githubactions&label=CI)](https://github.com/keshavsapra/nextchapter/actions/workflows/docker.yml)
+![Formats](https://img.shields.io/badge/Formats-PDF%20%7C%20EPUB-f97316?style=flat-square)
+![Platforms](https://img.shields.io/badge/Arch-amd64%20%7C%20arm64-10b981?style=flat-square&logo=docker)
+![Built with](https://img.shields.io/badge/Rust%20%2B%20Svelte-0891b2?style=flat-square&logo=rust)
 
 <br>
 
 <p align="center">
-  <img src="screenshots/example.png" alt="NextChapter Screenshot" width="85%">
+  <kbd><img src="screenshots/example.png" alt="NextChapter in action" width="86%"></kbd>
 </p>
 
----
+</div>
 
-## 📖 About NextChapter
+<br>
 
-> **Note**: This repository originated as an enhanced fork of the open-source **Inkheart** project created by **[Nystik](https://github.com/Nystik-gh)**. It has evolved into **NextChapter**, extending the original foundation with native **EPUB reading & navigation**, multi-architecture native GitHub Actions CI/CD (`linux/amd64` & `linux/arm64`), modernized theme options, and reader performance improvements.
+> [!IMPORTANT]
+> **NextChapter** began as an enhanced fork of **[Inkheart](https://github.com/Nystik-gh/inkheart)** by [Nystik](https://github.com/Nystik-gh) and has grown into its own project — adding native **EPUB reading**, multi-arch CI/CD (`linux/amd64` + `linux/arm64`), nine curated themes, and a deeply reworked reader experience.
 
-**NextChapter** is a minimalist, self-hosted digital library designed around one core philosophy: **your filesystem is the source of truth**. 
+<br>
 
-Instead of requiring an external database, complex schemas, or manual book metadata curation, NextChapter scans your media directory as an on-disk folder tree. It extracts high-resolution covers, compiles an instant full-text search index, and provides sleek, integrated web readers for both **PDF** and **EPUB** documents.
+## 🧭 The idea
 
-NextChapter is intentionally lightweight and focused. It is not an unwieldy comic/manga scraper or a full-blown OPDS manager — it does one thing exceptionally well: gives you a fast, beautiful way to read and search your documents on desktop, tablet, and mobile.
+**Your filesystem is the source of truth.** No database. No metadata curation. No lock-in.
 
----
+Drop your files into folders, point NextChapter at the directory, and it:
 
-## ✨ Features
+1. 📂 Mirrors your exact folder hierarchy
+2. 🖼️ Extracts high-resolution cover art automatically
+3. 🔍 Builds an instant full-text search index (PDF *pages* and EPUB *chapters*)
+4. 📖 Serves it all through a sleek web reader — desktop, tablet, and mobile
 
-- 📁 **Filesystem-Driven Navigation** — Preserves your exact folder hierarchy without requiring a database.
-- 📑 **Dual Native Web Readers**:
-  - **PDF Reader**: Built on PDF.js with continuous scrolling, page spread modes, thumbnails, and outline navigation.
-  - **EPUB Reader**: Built on epub.js with table-of-contents navigation, responsive page turns, keyboard shortcuts, and swipe gestures.
-- 🔍 **Blazing Fast Full-Text Search** — Powered by [Tantivy](https://github.com/quickwit-oss/tantivy). Indexes content across PDF pages and EPUB chapters with outline/heading boost. Only re-indexes modified files (`mtime`).
-- 🎨 **Theme Consistency** — Adaptive light and dark modes across the app and document reading canvas.
-- 🔖 **Reading Progress Tracking** — Automatically remembers your current page/CFI location in `localStorage`.
-- 📌 **Sidebar Pins & Collections** — Pin favorite folders to your sidebar or group documents into custom collections.
-- 🔗 **Direct Page & Location Linking** — Link directly to any page or chapter (e.g. `/reader/:id?page=4`), with OpenGraph social preview cards.
-- 📱 **Mobile & Tablet Optimized** — Responsive drawer sidebars, auto-collapsing toolbars, and touch navigation.
-- 🌐 **Multi-Architecture Support** — Prebuilt Docker images for **`linux/amd64`** and **`linux/arm64`** (runs natively on Ubuntu, Debian, Fedora, Raspberry Pi, Apple Silicon, and NAS platforms).
-- 🔒 **Optional Authentication** — Simple drop-in Firebase Auth gate with account whitelisting.
+It deliberately does one thing exceptionally well: a **fast, beautiful way to read and search your own documents**. It's not a comic scraper, not an OPDS manager, not a metadata librarian.
 
----
+<br>
 
-## 🚀 Quickstart with Docker Compose
+## ✨ Highlights
 
-Create a `docker-compose.yml` file:
+<table>
+<tr><th width="50%">📚 Library</th><th width="50%">📖 Readers</th></tr>
+<tr><td>
+
+- **Filesystem-driven** — your folder tree *is* the library, zero redundancy
+- **Full-text search** — powered by [Tantivy](https://github.com/quickwit-oss/tantivy); searches inside PDF pages and EPUB chapters with heading boosts, and only re-indexes files that changed (`mtime`)
+- **Smart covers** — automatic cover extraction from PDF first pages & EPUB metadata, with graceful fallback
+- **Pins & Collections** — pin favourite folders to the sidebar, group documents into custom collections
+- **OpenGraph previews** — share a link to any page or chapter and get a rich preview card
+
+</td><td>
+
+- **PDF** — PDF.js engine with continuous scroll, page spreads, thumbnails, and outline navigation
+- **EPUB** — epub.js engine with TOC sidebar, paginated or continuous-scroll flow, and a location pill (`Page n / m`)
+- **Keyboard & touch** — `←` `→` `Space` `PgUp` `PgDn` page turns, swipe on mobile, safe with open dialogs
+- **Progress that sticks** — resumes exactly where you left off, down to the CFI location, saved locally
+- **Deep links** — `/reader/:id?page=4` or any CFI anchor for direct linking
+
+</td></tr>
+<tr><th>🎨 Appearance</th><th>🛡️ Operations</th></tr>
+<tr><td>
+
+- **9 curated themes** — Light, Dark, Glassmorphism, Neomorphism, Aurora, Neo-Brutalism, Cyberpunk, Monochrome + a `system` mode
+- **Theme the book, not just the app** — reader canvas follows the selected theme reliably, even after switching back and forth
+- **Per-theme color scheme** — native controls, scrollbars, and form inputs match too
+- **Mobile-first responsive** — drawer sidebar, auto-collapsing toolbars, touch navigation
+
+</td><td>
+
+- **Single static binary + SPA** — Rust (Actix-Web) backend, Svelte frontend, distroless container
+- **Multi-arch images** — `linux/amd64` & `linux/arm64`: Raspberry Pi 4/5, Apple Silicon, NAS, VPS — all native
+- **Runs as non-root** — UID 1000 inside the container
+- **Optional auth** — drop-in Firebase Auth gate with account whitelisting
+- **Reverse-proxy friendly** — sub-path deployments via `BASE_PATH`
+
+</td></tr>
+</table>
+
+<br>
+
+## 🚀 Quickstart
+
+Create a `docker-compose.yml`:
 
 ```yaml
 services:
@@ -72,34 +110,42 @@ services:
       - TEXT_INDEX_ENABLED=true            # Enable full-text search indexing
 ```
 
-Ensure your storage directories exist and have proper write permissions (NextChapter runs as non-root UID 1000 inside the container):
+Ensure the storage directories exist with write permissions for the container's non-root user (UID 1000):
+
 ```bash
-mkdir -p /path/to/covers /path/to/thumbnails /path/to/config /path/to/your/books
+mkdir -p /path/to/{covers,thumbnails,config,books}
 sudo chown -R 1000:1000 /path/to/covers /path/to/thumbnails /path/to/config
 ```
-*(Alternatively, you can set `user: "0:0"` in your `docker-compose.yml` to allow the container to run with host root permissions).*
 
-Start the container:
+> [!TIP]
+> Alternatively, set `user: "0:0"` in the compose file to run as root on the host.
+
+Then:
+
 ```bash
 docker compose up -d
 ```
-Open **`http://localhost:8080`** in your browser.
+
+…and open **<http://localhost:8080>**.
 
 > [!NOTE]
-> On the first startup with a large collection, building the full-text search index may take a few minutes. Because `/config` is persisted, subsequent restarts will only scan for new or modified files.
+> The first index build over a large collection can take a few minutes. Since `/config` is persisted, later restarts only scan for new or modified files.
 
----
+<br>
 
-## 💻 Cross-Platform Deployment
+## 💻 Cross-platform deployment
 
-NextChapter images are published as multi-architecture containers (`linux/amd64` and `linux/arm64`). Docker will automatically detect and pull the optimal binary for your host without any extra configuration:
+Images are published as **multi-architecture** containers (`linux/amd64`, `linux/arm64`) — Docker picks the right one automatically:
 
-- **Linux / VPS**: Ubuntu, Debian, Fedora, Arch, Alpine, etc.
-- **Home Servers & NAS**: Synology, Unraid, TrueNAS SCALE, QNAP, or Portainer.
-- **Single-Board Computers**: Raspberry Pi (4B / 5), Rock Pi, Orange Pi, and other ARM64 systems.
-- **macOS / Windows**: Via Docker Desktop (native ARM64 execution on Apple Silicon M-series chips).
+| Platform | Works with |
+|---|---|
+| Linux / VPS | Ubuntu, Debian, Fedora, Arch, Alpine |
+| Home servers / NAS | Synology, Unraid, TrueNAS SCALE, QNAP, Portainer |
+| Single-board | Raspberry Pi 4B / 5, Rock Pi, Orange Pi |
+| macOS / Windows | Docker Desktop, including native Apple Silicon |
 
-### Docker CLI Example
+### Docker CLI
+
 ```bash
 docker run -d \
   --name nextchapter \
@@ -112,11 +158,11 @@ docker run -d \
   ghcr.io/keshavsapra/nextchapter:latest
 ```
 
----
+<br>
 
-## ⚙️ Configuration Reference
+## ⚙️ Configuration
 
-NextChapter supports configuration through environment variables or a `nextchapter.toml` (or legacy `inkheart.toml`) file.
+Configure via environment variables or a `nextchapter.toml` (legacy `inkheart.toml` also accepted).
 
 | Environment Variable | Description | Default |
 |---|---|---|
@@ -135,13 +181,12 @@ NextChapter supports configuration through environment variables or a `nextchapt
 | `FIREBASE_CONFIG_PATH` | Path to `firebase.json` for optional Google/email auth | `./firebase.json` |
 | `FIREBASE_WHITELIST` | Path to text file with whitelisted user IDs | None |
 
----
+<br>
 
-## 🌐 Reverse Proxy & Subdirectory Setup
+## 🌐 Reverse proxy & subdirectory setup
 
-To serve NextChapter behind a reverse proxy (such as Nginx, Caddy, Traefik, or Cloudflare Tunnels):
+### Root domain
 
-### Nginx Root Domain
 ```nginx
 location / {
     proxy_pass http://127.0.0.1:8080;
@@ -153,7 +198,9 @@ location / {
 ```
 
 ### Subdirectory (e.g. `/library/`)
-Set `BASE_PATH=/library` in your container environment, then configure Nginx:
+
+Set `BASE_PATH=/library` in the container environment, then:
+
 ```nginx
 location /library/ {
     proxy_pass http://127.0.0.1:8080/;
@@ -164,21 +211,23 @@ location /library/ {
 }
 ```
 
----
+Works the same with Caddy, Traefik, or Cloudflare Tunnels.
 
-## 🛠️ Building from Source & CI/CD
+<br>
 
-If you want to build locally or customize the code:
+## 🛠️ Building from source
 
-### Local Docker Build
+### Local Docker build
+
 ```bash
 docker build -t nextchapter:local -f docker/dockerfile .
 ```
 
-### Automated CI/CD
-This repository includes an automated GitHub Actions workflow ([`.github/workflows/docker.yml`](.github/workflows/docker.yml)) that builds multi-arch images (`linux/amd64`, `linux/arm64`) on every push and publishes them directly to GitHub Container Registry (`ghcr.io`).
+### CI/CD
 
----
+Every push triggers [`.github/workflows/docker.yml`](.github/workflows/docker.yml), which builds multi-arch images (`linux/amd64`, `linux/arm64`) and publishes them to GitHub Container Registry (`ghcr.io`).
+
+<br>
 
 ## 🏗️ Architecture
 
@@ -195,25 +244,30 @@ nextchapter/
 └── docker/             # Multi-stage multi-arch Dockerfile (cargo-chef + node + distroless)
 ```
 
----
+<br>
 
 ## 📸 Screenshots
 
 <p align="center">
   <img src="screenshots/folders.png" width="31%" alt="Folders">
   <img src="screenshots/files.png" width="31%" alt="Files">
-  <img src="screenshots/reader.png" width="31%" alt="PDF Reader">
+  <img src="screenshots/reader.png" width="31%" alt="Reader">
 </p>
 <p align="center">
-  <img src="screenshots/reader-spread.png" width="48%" alt="Reader Spread">
-  <img src="screenshots/opengraph-preview.png" width="48%" alt="Link Preview">
+  <img src="screenshots/reader-spread.png" width="48%" alt="Reader spread">
+  <img src="screenshots/opengraph-preview.png" width="48%" alt="OpenGraph link preview">
 </p>
 
----
+<br>
 
-## 📄 License & Credits
+## 📄 License & credits
 
-- Inkheart was originally created by **[Nystik](https://github.com/Nystik-gh)** ([original repo](https://github.com/Nystik-gh/inkheart) · [support Nystik on Ko-fi](https://ko-fi.com/nystik)).
-- EPUB support, multi-architecture GitHub Actions, and enhancements by **[Keshav Sapra](https://github.com/keshavsapra)**.
-- Licensed under the **[Apache License, Version 2.0](LICENSE)**. You are free to use, modify, and distribute this software in accordance with the terms of the Apache 2.0 license.
-- Logo and branding assets are copyright of their respective authors.
+- **Inkheart** was originally created by [Nystik](https://github.com/Nystik-gh) ([original repo](https://github.com/Nystik-gh/inkheart) · [support Nystik on Ko-fi](https://ko-fi.com/nystik))
+- EPUB support, multi-architecture CI/CD, and all further enhancements by [Keshav Sapra](https://github.com/keshavsapra)
+- Licensed under the [Apache License, Version 2.0](LICENSE) — free to use, modify, and distribute under its terms
+- Logo and branding assets are copyright of their respective authors
+
+<div align="center">
+  <br>
+  <sub>Built with 🦀 Rust, ⚡ Svelte, and 📚 far too many unread books</sub>
+</div>

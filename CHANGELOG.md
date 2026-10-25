@@ -13,6 +13,17 @@ All notable changes to this project will be documented in this file.
 - Integrated web EPUB reader built on epub.js with table of contents sidebar, navigation pill, and light/dark theme support
 - Direct linking into EPUB chapters and CFI locations
 
+### Fixed
+
+- EPUB themes no longer bleed into each other - switching themes (including switching back to a previously used one) now always restyles the book content correctly
+- EPUB page/location pill showed an off-by-one total (e.g. `Page 5 / 4 (100%)`); location and percentage are now clamped and accurate
+- Rapid page turns and keyboard navigation no longer drop input while epub.js is still processing
+- Keyboard shortcuts no longer paginate while a dialog is open or while a button, input, or link has focus
+- Continuous scroll mode toggle now visually switches to a vertical scrolling layout and preserves the reading position
+- Resize/relayout of the EPUB reader no longer crashes on load while epub.js is still initializing its view manager
+- Toggle switches are visible in all themes (monochrome previously rendered them as an unreadable solid white block)
+- Per-theme `color-scheme` on the document root so native form controls match the selected theme
+
 ## [1.4.0] - Factotum (2026-08-11)
 
 ### Added

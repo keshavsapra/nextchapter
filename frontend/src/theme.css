@@ -98,6 +98,8 @@
 }
 
 :root.dark {
+  color-scheme: dark;
+
   --text-color-light: var(--light-4);
   --text-color-default: var(--light-2);
   --text-color-contrast: var(--dark-1);
@@ -122,6 +124,8 @@
 }
 
 :root.light {
+  color-scheme: light;
+
   --separator-1: var(--light-4);
 
   --text-color-light: var(--light-5);
@@ -146,6 +150,8 @@
 }
 
 :root.glassmorphism {
+  color-scheme: dark;
+
   --background: #0f172a;
   --foreground: #1e293b;
   --card-color: rgba(30, 41, 59, 0.75);
@@ -174,6 +180,8 @@
 }
 
 :root.neomorphism {
+  color-scheme: light;
+
   --background: #e6ecf5;
   --foreground: #e6ecf5;
   --card-color: #e6ecf5;
@@ -202,6 +210,8 @@
 }
 
 :root.aurora {
+  color-scheme: dark;
+
   --background: #090d16;
   --foreground: #111827;
   --card-color: #111927;
@@ -228,6 +238,8 @@
 }
 
 :root.neo-brutalism {
+  color-scheme: light;
+
   --background: #fdfbf7;
   --foreground: #ffffff;
   --card-color: #ffffff;
@@ -258,6 +270,8 @@
 }
 
 :root.cyberpunk {
+  color-scheme: dark;
+
   --background: #0d0221;
   --foreground: #19053b;
   --card-color: #17082e;
@@ -284,6 +298,8 @@
 }
 
 :root.monochrome {
+  color-scheme: dark;
+
   --background: #0a0a0a;
   --foreground: #141414;
   --card-color: #121212;
@@ -302,6 +318,11 @@
   --button-primary-glow: #e0e0e0;
   --color-primary-400: #ffffff;
   --color-primary-500: #cccccc;
+
+  /* Toggle knobs sit on the checked slider background (--button-primary),
+     which is white in this theme - give the knob a dark fill. */
+  --toggle-knob-checked: #0a0a0a;
+  --toggle-track: #2a2a2a;
 
   --scrollbar: #333333;
 
@@ -326,6 +347,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
+    color-scheme: dark;
+
     --text-color-light: var(--light-4);
     --text-color-default: var(--light-2);
     --text-color-contrast: var(--dark-1);
@@ -352,6 +375,8 @@
 
 @media (prefers-color-scheme: light) {
   :root {
+    color-scheme: light;
+
     --separator-1: var(--light-4);
 
     --text-color-light: var(--light-5);
